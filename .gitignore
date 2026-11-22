@@ -47,3 +47,5 @@ next-env.d.ts
 # local dev artifacts
 .claude/settings.local.json
 dev-server*.log
+.vercel
+.env*
