@@ -8,6 +8,10 @@ export default async function StaffAppointmentsPage() {
   const session = await requireSession();
   requireStaff(session);
 
+  // Include today's earlier appointments so they can still be marked as visited.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   const upcoming = await db
     .select({
       id: appointments.id,
@@ -21,7 +25,7 @@ export default async function StaffAppointmentsPage() {
     .from(appointments)
     .innerJoin(slots, eq(appointments.slotId, slots.id))
     .innerJoin(patients, eq(appointments.patientId, patients.id))
-    .where(and(eq(appointments.status, "confirmed"), gte(slots.startAt, new Date())))
+    .where(and(eq(appointments.status, "confirmed"), gte(slots.startAt, startOfToday)))
     .orderBy(asc(slots.startAt));
 
   return (
@@ -34,6 +38,7 @@ export default async function StaffAppointmentsPage() {
             key={a.id}
             appointmentId={a.id}
             patientId={a.patientId}
+            allowMarkVisited
             label={
               <>
                 <p className="font-medium text-slate-900">

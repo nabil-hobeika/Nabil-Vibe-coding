@@ -18,6 +18,9 @@ export default async function StaffPatientDetailPage({
   const [patient] = await db.select().from(patients).where(eq(patients.id, patientId)).limit(1);
   if (!patient) notFound();
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   const upcoming = await db
     .select({ id: appointments.id, startAt: slots.startAt })
     .from(appointments)
@@ -26,7 +29,7 @@ export default async function StaffPatientDetailPage({
       and(
         eq(appointments.patientId, patientId),
         eq(appointments.status, "confirmed"),
-        gte(slots.startAt, new Date()),
+        gte(slots.startAt, startOfToday),
       ),
     )
     .orderBy(asc(slots.startAt));
@@ -54,6 +57,7 @@ export default async function StaffPatientDetailPage({
               key={a.id}
               appointmentId={a.id}
               patientId={patientId}
+              allowMarkVisited
               label={a.startAt.toLocaleString(undefined, {
                 weekday: "short",
                 month: "short",

@@ -1,10 +1,10 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { appointments } from "@/db/schema";
-import { requireSession, requirePatientAccess } from "@/lib/authz/guards";
+import { appointments, slots, visits } from "@/db/schema";
+import { requireSession, requirePatientAccess, requireStaff } from "@/lib/authz/guards";
 import {
   cancelAppointment,
   rescheduleAppointment,
@@ -47,6 +47,55 @@ export async function cancelAppointmentAction(
   }
 
   revalidatePath(`/profile/${appointment.patientId}`);
+  revalidatePath("/staff/appointments");
+  return { error: null };
+}
+
+export async function markVisitedAction(
+  appointmentId: string,
+  reason: string,
+  notes?: string,
+): Promise<AppointmentActionResult> {
+  const session = await requireSession();
+  requireStaff(session);
+
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) return { error: "Please enter a reason for the visit" };
+
+  const [row] = await db
+    .select({ appointment: appointments, startAt: slots.startAt })
+    .from(appointments)
+    .innerJoin(slots, eq(appointments.slotId, slots.id))
+    .where(eq(appointments.id, appointmentId))
+    .limit(1);
+  if (!row) return { error: "Appointment not found" };
+  if (row.appointment.status !== "confirmed") {
+    return { error: "Only confirmed appointments can be marked as visited" };
+  }
+
+  const { appointment, startAt } = row;
+
+  await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(appointments)
+      .set({ status: "completed", updatedAt: new Date() })
+      .where(and(eq(appointments.id, appointmentId), eq(appointments.status, "confirmed")))
+      .returning({ id: appointments.id });
+    if (updated.length === 0) return;
+
+    await tx.insert(visits).values({
+      practiceId: appointment.practiceId,
+      patientId: appointment.patientId,
+      appointmentId,
+      visitDate: startAt.toISOString().slice(0, 10),
+      reason: trimmedReason,
+      notes: notes?.trim() || null,
+      createdBy: session.userId,
+    });
+  });
+
+  revalidatePath(`/profile/${appointment.patientId}`);
+  revalidatePath(`/staff/patients/${appointment.patientId}`);
   revalidatePath("/staff/appointments");
   return { error: null };
 }
