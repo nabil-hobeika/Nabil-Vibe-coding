@@ -1,12 +1,12 @@
 import { and, asc, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, patients, slots } from "@/db/schema";
-import { requireSession, requireStaff } from "@/lib/authz/guards";
+import { requireSession, requireStaffPage } from "@/lib/authz/guards";
 import { AppointmentRow } from "@/app/(app)/appointments/appointment-row";
 
 export default async function StaffAppointmentsPage() {
   const session = await requireSession();
-  requireStaff(session);
+  requireStaffPage(session);
 
   // Include today's earlier appointments so they can still be marked as visited.
   const startOfToday = new Date();

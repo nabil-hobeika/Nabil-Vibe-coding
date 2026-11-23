@@ -2,7 +2,7 @@ import { sql, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { patients, visits } from "@/db/schema";
-import { requireSession, requireStaff } from "@/lib/authz/guards";
+import { requireSession, requireStaffPage } from "@/lib/authz/guards";
 
 export default async function StaffPatientsPage({
   searchParams,
@@ -10,7 +10,7 @@ export default async function StaffPatientsPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const session = await requireSession();
-  requireStaff(session);
+  requireStaffPage(session);
   const { q } = await searchParams;
 
   const rows = await db

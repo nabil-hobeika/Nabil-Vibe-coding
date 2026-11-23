@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { appointments, patients, slots, visits } from "@/db/schema";
-import { requireSession, requireStaff } from "@/lib/authz/guards";
+import { requireSession, requireStaffPage } from "@/lib/authz/guards";
 import { VisitForm } from "@/app/(app)/visits/visit-form";
 import { VisitItem } from "@/app/(app)/visits/visit-item";
 import { AppointmentRow } from "@/app/(app)/appointments/appointment-row";
@@ -14,7 +14,7 @@ export default async function StaffPatientDetailPage({
 }) {
   const { patientId } = await params;
   const session = await requireSession();
-  requireStaff(session);
+  requireStaffPage(session);
 
   const [patient] = await db.select().from(patients).where(eq(patients.id, patientId)).limit(1);
   if (!patient) notFound();

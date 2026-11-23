@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { patientGuardians } from "@/db/schema";
 import { getSession, type SessionPayload } from "@/lib/auth/session";
@@ -22,6 +23,15 @@ export function requireStaff(session: SessionPayload): void {
   if (session.role !== "staff" && session.role !== "doctor") {
     throw new AuthzError("Staff access required");
   }
+}
+
+/**
+ * Page-level variant of requireStaff: renders the 404 page for non-staff
+ * instead of throwing, so a patient who guesses a staff URL sees "not found"
+ * rather than a crash. Server Actions should keep using requireStaff.
+ */
+export function requireStaffPage(session: SessionPayload): void {
+  if (session.role !== "staff" && session.role !== "doctor") notFound();
 }
 
 /**

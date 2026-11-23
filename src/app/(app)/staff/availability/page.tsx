@@ -1,7 +1,7 @@
 import { and, eq, gte, count } from "drizzle-orm";
 import { db } from "@/db";
 import { availabilityExceptions, availabilityTemplates, slots } from "@/db/schema";
-import { requireSession, requireStaff } from "@/lib/authz/guards";
+import { requireSession, requireStaffPage } from "@/lib/authz/guards";
 import { getPracticeDoctor } from "@/lib/scheduling/doctor";
 import { TemplateForm } from "./template-form";
 import { ExceptionForm } from "./exception-form";
@@ -13,7 +13,7 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 
 export default async function AvailabilityPage() {
   const session = await requireSession();
-  requireStaff(session);
+  requireStaffPage(session);
 
   const doctor = await getPracticeDoctor(session.practiceId);
 
