@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
+import { and, eq } from "drizzle-orm";
 import { visits } from "@/db/schema";
 import { requireSession, requireStaff } from "@/lib/authz/guards";
 
@@ -40,6 +41,32 @@ export async function addVisitAction(
     notes: notes || null,
     createdBy: session.userId,
   });
+
+  revalidatePath(`/staff/patients/${patientId}`);
+  revalidatePath(`/profile/${patientId}`);
+  return { error: null };
+}
+
+const updateVisitSchema = visitSchema.extend({ visitId: z.string().min(1) });
+
+export async function updateVisitAction(
+  _prevState: AddVisitState,
+  formData: FormData,
+): Promise<AddVisitState> {
+  const session = await requireSession();
+  requireStaff(session);
+
+  const parsed = updateVisitSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { visitId, patientId, visitDate, reason, notes } = parsed.data;
+
+  await db
+    .update(visits)
+    .set({ visitDate, reason, notes: notes || null })
+    .where(and(eq(visits.id, visitId), eq(visits.practiceId, session.practiceId)));
 
   revalidatePath(`/staff/patients/${patientId}`);
   revalidatePath(`/profile/${patientId}`);

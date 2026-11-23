@@ -1,0 +1,14 @@
+{
+  "_comment": "Test data for the visit history. Edit freely, then run `npm run db:seed`. Visits are matched on date + reason, so re-running never duplicates rows.",
+  "patient": {
+    "firstName": "Test",
+    "lastName": "Patient",
+    "dob": "1990-05-14"
+  },
+  "visits": [
+    { "visitDate": "2026-10-20", "reason": "Annual check-up", "notes": "Blood pressure normal. Advised more exercise." },
+    { "visitDate": "2026-09-02", "reason": "Flu symptoms", "notes": "Prescribed rest and fluids. Follow up if fever persists." },
+    { "visitDate": "2026-06-15", "reason": "Vaccination", "notes": null },
+    { "visitDate": "2026-03-08", "reason": "Back pain", "notes": "Referred to physiotherapy." }
+  ]
+}

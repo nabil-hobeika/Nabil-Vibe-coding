@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { appointments, patients, slots, visits } from "@/db/schema";
 import { requireSession, requireStaff } from "@/lib/authz/guards";
 import { VisitForm } from "@/app/(app)/visits/visit-form";
+import { VisitItem } from "@/app/(app)/visits/visit-item";
 import { AppointmentRow } from "@/app/(app)/appointments/appointment-row";
 
 export default async function StaffPatientDetailPage({
@@ -84,12 +85,11 @@ export default async function StaffPatientDetailPage({
         <h2 className="text-sm font-semibold text-slate-900">Visit history</h2>
         <ul className="mt-2 divide-y divide-slate-100">
           {history.map((v) => (
-            <li key={v.id} className="py-2 text-sm">
-              <p className="font-medium text-slate-900">
-                {v.visitDate} &mdash; {v.reason}
-              </p>
-              {v.notes && <p className="mt-0.5 text-slate-600">{v.notes}</p>}
-            </li>
+            <VisitItem
+              key={v.id}
+              visit={{ id: v.id, visitDate: v.visitDate, reason: v.reason, notes: v.notes }}
+              patientId={patientId}
+            />
           ))}
           {history.length === 0 && (
             <li className="py-2 text-sm text-slate-400">No visits recorded yet.</li>

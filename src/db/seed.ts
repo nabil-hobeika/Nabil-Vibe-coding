@@ -1,13 +1,65 @@
 import "dotenv/config";
-import { eq } from "drizzle-orm";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { and, eq } from "drizzle-orm";
 import { db } from "./index";
-import { practices, appUsers, availabilityTemplates } from "./schema";
+import { practices, appUsers, availabilityTemplates, patients, visits } from "./schema";
 import { hashPassword } from "@/lib/auth/password";
 import { generateSlots } from "@/lib/scheduling/generate-slots";
 
 const PRACTICE_NAME = process.env.PRACTICE_NAME ?? "Nabil's Practice";
 const DOCTOR_EMAIL = process.env.SEED_DOCTOR_EMAIL ?? "doctor@example.com";
 const DOCTOR_PASSWORD = process.env.SEED_DOCTOR_PASSWORD ?? "changeme123";
+
+type SeedVisits = {
+  patient: { firstName: string; lastName: string; dob: string };
+  visits: { visitDate: string; reason: string; notes: string | null }[];
+};
+
+// Test data for the visit history lives in data/seed-visits.json. Idempotent:
+// the patient is matched on name + dob, and visits on date + reason.
+async function seedVisits(practiceId: string, createdBy: string) {
+  const file = path.join(process.cwd(), "data", "seed-visits.json");
+  if (!existsSync(file)) return;
+  const seed: SeedVisits = JSON.parse(readFileSync(file, "utf8"));
+
+  let [patient] = await db
+    .select()
+    .from(patients)
+    .where(
+      and(
+        eq(patients.practiceId, practiceId),
+        eq(patients.firstName, seed.patient.firstName),
+        eq(patients.lastName, seed.patient.lastName),
+        eq(patients.dob, seed.patient.dob),
+      ),
+    )
+    .limit(1);
+
+  if (!patient) {
+    [patient] = await db
+      .insert(patients)
+      .values({ practiceId, ...seed.patient })
+      .returning();
+    console.log(`Seeded test patient: ${patient.firstName} ${patient.lastName}`);
+  }
+
+  const existing = await db.select().from(visits).where(eq(visits.patientId, patient.id));
+  let added = 0;
+  for (const v of seed.visits) {
+    if (existing.some((e) => e.visitDate === v.visitDate && e.reason === v.reason)) continue;
+    await db.insert(visits).values({
+      practiceId,
+      patientId: patient.id,
+      visitDate: v.visitDate,
+      reason: v.reason,
+      notes: v.notes,
+      createdBy,
+    });
+    added++;
+  }
+  console.log(`Seeded ${added} test visits`);
+}
 
 async function main() {
   let [practice] = await db.select().from(practices).limit(1);
@@ -73,6 +125,8 @@ async function main() {
     );
     console.log("Seeded default availability: Mon-Fri 09:00-17:00");
   }
+
+  await seedVisits(practice.id, doctor.id);
 
   const { created } = await generateSlots({
     practiceId: practice.id,
