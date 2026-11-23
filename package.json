@@ -10,6 +10,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
+    "db:dump": "tsx src/db/dump-visits.ts",
     "db:reset": "node --env-file=.env.local scripts/db-reset.mjs"
   },
   "dependencies": {
