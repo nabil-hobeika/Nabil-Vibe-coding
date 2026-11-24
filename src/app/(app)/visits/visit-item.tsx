@@ -37,7 +37,7 @@ export function VisitItem({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="shrink-0 text-xs font-medium text-slate-600 underline"
+          className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-slate-500 hover:bg-slate-50"
         >
           Edit
         </button>
