@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 import { addVisitAction, type AddVisitState } from "./actions";
+import { toLocalDateKey } from "@/lib/date-key";
 
 const initialState: AddVisitState = { error: null };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => toLocalDateKey(new Date());
 
 export function VisitForm({ patientId }: { patientId: string }) {
   const [state, formAction, pending] = useActionState(addVisitAction, initialState);

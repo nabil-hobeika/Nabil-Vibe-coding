@@ -1,5 +1,6 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
+import { toLocalDateKey } from "@/lib/date-key";
 import {
   availabilityExceptions,
   availabilityTemplates,
@@ -26,9 +27,9 @@ function startOfDay(date: Date): Date {
   return d;
 }
 
-function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
+// Exceptions are stored as calendar dates ("YYYY-MM-DD") as the doctor picked
+// them, and the loop below walks local days, so keys must be local too.
+const toDateKey = toLocalDateKey;
 
 type Window = { start: string; end: string; slotDurationMinutes: number };
 

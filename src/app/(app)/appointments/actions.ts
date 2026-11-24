@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
+import { toLocalDateKey } from "@/lib/date-key";
 import { appointments, slots, visits } from "@/db/schema";
 import { requireSession, requirePatientAccess, requireStaff } from "@/lib/authz/guards";
 import {
@@ -87,7 +88,7 @@ export async function markVisitedAction(
       practiceId: appointment.practiceId,
       patientId: appointment.patientId,
       appointmentId,
-      visitDate: startAt.toISOString().slice(0, 10),
+      visitDate: toLocalDateKey(startAt),
       reason: trimmedReason,
       notes: notes?.trim() || null,
       createdBy: session.userId,

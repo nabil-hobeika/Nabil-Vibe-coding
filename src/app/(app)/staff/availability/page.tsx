@@ -1,5 +1,6 @@
 import { and, eq, gte, count } from "drizzle-orm";
 import { db } from "@/db";
+import { toLocalDateKey } from "@/lib/date-key";
 import { availabilityExceptions, availabilityTemplates, slots } from "@/db/schema";
 import { requireSession, requireStaffPage } from "@/lib/authz/guards";
 import { getPracticeDoctor } from "@/lib/scheduling/doctor";
@@ -37,7 +38,7 @@ export default async function AvailabilityPage() {
     .where(
       and(
         eq(availabilityExceptions.doctorUserId, doctor.id),
-        gte(availabilityExceptions.date, new Date().toISOString().slice(0, 10)),
+        gte(availabilityExceptions.date, toLocalDateKey(new Date())),
       ),
     )
     .orderBy(availabilityExceptions.date);
