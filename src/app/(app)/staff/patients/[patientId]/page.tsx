@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { db } from "@/db";
 import { appointments, patients, slots, visits } from "@/db/schema";
 import { requireSession, requireStaffPage } from "@/lib/authz/guards";
@@ -47,11 +48,19 @@ export default async function StaffPatientDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">
-          {patient.firstName} {patient.lastName}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">DOB {patient.dob}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">
+            {patient.firstName} {patient.lastName}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">DOB {patient.dob}</p>
+        </div>
+        <Link
+          href={`/book/${patientId}`}
+          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+        >
+          Book appointment
+        </Link>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
