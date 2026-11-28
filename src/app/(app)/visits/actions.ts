@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { visits } from "@/db/schema";
-import { AuthzError, requireSession, requireStaff } from "@/lib/authz/guards";
-import type { SessionPayload } from "@/lib/auth/session";
+import { AuthzError, requireStaff } from "@/lib/authz/guards";
+import { getSession, type SessionPayload } from "@/lib/auth/session";
 
 const visitSchema = z.object({
   patientId: z.string().min(1),
@@ -22,8 +22,9 @@ export type AddVisitState = { error: string | null };
 async function staffSessionOrError(): Promise<
   { session: SessionPayload; error?: undefined } | { session?: undefined; error: string }
 > {
+  const session = await getSession();
+  if (!session) return { error: "Please sign in to change visit records." };
   try {
-    const session = await requireSession();
     requireStaff(session);
     return { session };
   } catch (err) {
