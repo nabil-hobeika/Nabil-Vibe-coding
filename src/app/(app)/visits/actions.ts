@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { visits } from "@/db/schema";
-import { requireSession, requireStaff } from "@/lib/authz/guards";
+import { AuthzError, requireSession, requireStaff } from "@/lib/authz/guards";
+import type { SessionPayload } from "@/lib/auth/session";
 
 const visitSchema = z.object({
   patientId: z.string().min(1),
@@ -16,15 +17,32 @@ const visitSchema = z.object({
 
 export type AddVisitState = { error: string | null };
 
+// Staff-only write guard. A patient (or signed-out) caller gets a returned
+// error for the form to display instead of an uncaught AuthzError (HTTP 500).
+async function staffSessionOrError(): Promise<
+  { session: SessionPayload; error?: undefined } | { session?: undefined; error: string }
+> {
+  try {
+    const session = await requireSession();
+    requireStaff(session);
+    return { session };
+  } catch (err) {
+    if (err instanceof AuthzError) {
+      return { error: "You don't have permission to change visit records." };
+    }
+    throw err;
+  }
+}
+
 export async function addVisitAction(
   _prevState: AddVisitState,
   formData: FormData,
 ): Promise<AddVisitState> {
-  const session = await requireSession();
-  // Staff-only write: a patient session throws AuthzError here before any
-  // row is touched — this is the app-layer stand-in for the RLS policy that
-  // denies patients INSERT on `visits` (see lib/authz/guards.ts).
-  requireStaff(session);
+  // Staff-only write: the app-layer stand-in for the RLS policy that denies
+  // patients INSERT on `visits` (see lib/authz/guards.ts).
+  const auth = await staffSessionOrError();
+  if (auth.error !== undefined) return { error: auth.error };
+  const { session } = auth;
 
   const parsed = visitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -53,8 +71,9 @@ export async function updateVisitAction(
   _prevState: AddVisitState,
   formData: FormData,
 ): Promise<AddVisitState> {
-  const session = await requireSession();
-  requireStaff(session);
+  const auth = await staffSessionOrError();
+  if (auth.error !== undefined) return { error: auth.error };
+  const { session } = auth;
 
   const parsed = updateVisitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
