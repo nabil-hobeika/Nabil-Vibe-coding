@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { updateVisitAction, type AddVisitState } from "./actions";
+import { deleteVisitAction, updateVisitAction, type AddVisitState } from "./actions";
 
 const initialState: AddVisitState = { error: null };
 const inputCls =
@@ -17,6 +17,8 @@ export function VisitItem({
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(updateVisitAction, initialState);
   const [submitted, setSubmitted] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteState, deleteAction, deleting] = useActionState(deleteVisitAction, initialState);
 
   useEffect(() => {
     if (submitted && !pending && !state.error) {
@@ -34,13 +36,47 @@ export function VisitItem({
           </p>
           {visit.notes && <p className="mt-0.5 text-slate-600">{visit.notes}</p>}
         </div>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-slate-500 hover:bg-slate-50"
-        >
-          Edit
-        </button>
+        {confirmingDelete ? (
+          <form action={deleteAction} className="shrink-0 text-right">
+            <input type="hidden" name="visitId" value={visit.id} />
+            <input type="hidden" name="patientId" value={patientId} />
+            <p className="text-xs font-medium text-slate-700">Delete this visit?</p>
+            {deleteState.error && <p className="text-xs text-red-600">{deleteState.error}</p>}
+            <div className="mt-1 flex justify-end gap-2">
+              <button
+                type="submit"
+                disabled={deleting}
+                className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Yes, delete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-slate-500 hover:bg-slate-50"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="rounded-md border border-red-300 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:border-red-500 hover:bg-red-50"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </li>
     );
   }

@@ -92,3 +92,32 @@ export async function updateVisitAction(
   revalidatePath(`/profile/${patientId}`);
   return { error: null };
 }
+
+const deleteVisitSchema = z.object({
+  visitId: z.string().min(1),
+  patientId: z.string().min(1),
+});
+
+export async function deleteVisitAction(
+  _prevState: AddVisitState,
+  formData: FormData,
+): Promise<AddVisitState> {
+  const auth = await staffSessionOrError();
+  if (auth.error !== undefined) return { error: auth.error };
+  const { session } = auth;
+
+  const parsed = deleteVisitSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { visitId, patientId } = parsed.data;
+
+  await db
+    .delete(visits)
+    .where(and(eq(visits.id, visitId), eq(visits.practiceId, session.practiceId)));
+
+  revalidatePath(`/staff/patients/${patientId}`);
+  revalidatePath(`/profile/${patientId}`);
+  return { error: null };
+}
