@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { toLocalDateKey } from "@/lib/date-key";
 import { appointments, slots, visits } from "@/db/schema";
-import { requireSession, requirePatientAccess, requireStaff } from "@/lib/authz/guards";
+import { AuthzError, requirePatientAccess } from "@/lib/authz/guards";
+import { getSession } from "@/lib/auth/session";
 import {
   cancelAppointment,
   rescheduleAppointment,
@@ -21,10 +22,29 @@ function isStaffRole(role: string) {
   return role === "staff" || role === "doctor";
 }
 
+const SIGN_IN_ERROR = "Please sign in to manage appointments.";
+const PERMISSION_ERROR = "You don't have permission to change this appointment.";
+
+// Returns an error message when the (non-staff) caller has no access to the
+// patient, so the action can return it instead of throwing an AuthzError.
+async function patientAccessError(
+  session: Parameters<typeof requirePatientAccess>[0],
+  patientId: string,
+): Promise<string | null> {
+  try {
+    await requirePatientAccess(session, patientId);
+    return null;
+  } catch (err) {
+    if (err instanceof AuthzError) return PERMISSION_ERROR;
+    throw err;
+  }
+}
+
 export async function cancelAppointmentAction(
   appointmentId: string,
 ): Promise<AppointmentActionResult> {
-  const session = await requireSession();
+  const session = await getSession();
+  if (!session) return { error: SIGN_IN_ERROR };
 
   const [appointment] = await db
     .select()
@@ -37,7 +57,8 @@ export async function cancelAppointmentAction(
 
   const bypassCutoff = isStaffRole(session.role);
   if (!bypassCutoff) {
-    await requirePatientAccess(session, appointment.patientId);
+    const accessError = await patientAccessError(session, appointment.patientId);
+    if (accessError) return { error: accessError };
   }
 
   try {
@@ -59,8 +80,9 @@ export async function markVisitedAction(
   reason: string,
   notes?: string,
 ): Promise<AppointmentActionResult> {
-  const session = await requireSession();
-  requireStaff(session);
+  const session = await getSession();
+  if (!session) return { error: SIGN_IN_ERROR };
+  if (!isStaffRole(session.role)) return { error: PERMISSION_ERROR };
 
   const trimmedReason = reason.trim();
   if (!trimmedReason) return { error: "Please enter a reason for the visit" };
@@ -109,7 +131,8 @@ export async function rescheduleAppointmentAction(
   appointmentId: string,
   newSlotId: string,
 ): Promise<AppointmentActionResult> {
-  const session = await requireSession();
+  const session = await getSession();
+  if (!session) return { error: SIGN_IN_ERROR };
 
   const [appointment] = await db
     .select()
@@ -122,7 +145,8 @@ export async function rescheduleAppointmentAction(
 
   const bypassCutoff = isStaffRole(session.role);
   if (!bypassCutoff) {
-    await requirePatientAccess(session, appointment.patientId);
+    const accessError = await patientAccessError(session, appointment.patientId);
+    if (accessError) return { error: accessError };
   }
 
   try {
