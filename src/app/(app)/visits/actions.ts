@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { and, eq } from "drizzle-orm";
-import { visits } from "@/db/schema";
+import { patients, visits } from "@/db/schema";
 import { AuthzError, requireStaff } from "@/lib/authz/guards";
 import { getSession, type SessionPayload } from "@/lib/auth/session";
 
@@ -51,6 +51,14 @@ export async function addVisitAction(
   }
 
   const { patientId, visitDate, reason, notes } = parsed.data;
+
+  // The patient must belong to the caller's practice.
+  const [patient] = await db
+    .select({ id: patients.id })
+    .from(patients)
+    .where(and(eq(patients.id, patientId), eq(patients.practiceId, session.practiceId)))
+    .limit(1);
+  if (!patient) return { error: "Patient not found." };
 
   await db.insert(visits).values({
     practiceId: session.practiceId,

@@ -1,6 +1,6 @@
 import { and, asc, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, slots } from "@/db/schema";
+import { appointments, patients, slots } from "@/db/schema";
 
 export class SlotUnavailableError extends Error {
   constructor() {
@@ -28,6 +28,14 @@ export async function bookSlotTx(
 ) {
   const [slot] = await tx.select().from(slots).where(eq(slots.id, slotId)).limit(1);
   if (!slot) throw new SlotUnavailableError();
+
+  // A slot can only be booked for a patient of the same practice.
+  const [patient] = await tx
+    .select({ practiceId: patients.practiceId })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  if (!patient || patient.practiceId !== slot.practiceId) throw new SlotUnavailableError();
 
   const [claimed] = await tx
     .update(slots)

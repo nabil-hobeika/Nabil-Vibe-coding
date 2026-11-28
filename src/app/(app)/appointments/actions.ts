@@ -31,7 +31,9 @@ export async function cancelAppointmentAction(
     .from(appointments)
     .where(eq(appointments.id, appointmentId))
     .limit(1);
-  if (!appointment) return { error: "Appointment not found" };
+  if (!appointment || appointment.practiceId !== session.practiceId) {
+    return { error: "Appointment not found" };
+  }
 
   const bypassCutoff = isStaffRole(session.role);
   if (!bypassCutoff) {
@@ -69,7 +71,9 @@ export async function markVisitedAction(
     .innerJoin(slots, eq(appointments.slotId, slots.id))
     .where(eq(appointments.id, appointmentId))
     .limit(1);
-  if (!row) return { error: "Appointment not found" };
+  if (!row || row.appointment.practiceId !== session.practiceId) {
+    return { error: "Appointment not found" };
+  }
   if (row.appointment.status !== "confirmed") {
     return { error: "Only confirmed appointments can be marked as visited" };
   }
@@ -112,7 +116,9 @@ export async function rescheduleAppointmentAction(
     .from(appointments)
     .where(eq(appointments.id, appointmentId))
     .limit(1);
-  if (!appointment) return { error: "Appointment not found" };
+  if (!appointment || appointment.practiceId !== session.practiceId) {
+    return { error: "Appointment not found" };
+  }
 
   const bypassCutoff = isStaffRole(session.role);
   if (!bypassCutoff) {
