@@ -16,7 +16,11 @@ export default async function StaffPatientDetailPage({
   const session = await requireSession();
   requireStaffPage(session);
 
-  const [patient] = await db.select().from(patients).where(eq(patients.id, patientId)).limit(1);
+  const [patient] = await db
+    .select()
+    .from(patients)
+    .where(and(eq(patients.id, patientId), eq(patients.practiceId, session.practiceId)))
+    .limit(1);
   if (!patient) notFound();
 
   const startOfToday = new Date();

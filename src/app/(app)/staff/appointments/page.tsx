@@ -25,7 +25,13 @@ export default async function StaffAppointmentsPage() {
     .from(appointments)
     .innerJoin(slots, eq(appointments.slotId, slots.id))
     .innerJoin(patients, eq(appointments.patientId, patients.id))
-    .where(and(eq(appointments.status, "confirmed"), gte(slots.startAt, startOfToday)))
+    .where(
+      and(
+        eq(appointments.practiceId, session.practiceId),
+        eq(appointments.status, "confirmed"),
+        gte(slots.startAt, startOfToday),
+      ),
+    )
     .orderBy(asc(slots.startAt));
 
   return (

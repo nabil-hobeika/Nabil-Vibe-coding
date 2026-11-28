@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { patientGuardians } from "@/db/schema";
+import { patientGuardians, patients } from "@/db/schema";
 import { getSession, type SessionPayload } from "@/lib/auth/session";
 
 export class AuthzError extends Error {
@@ -35,7 +35,7 @@ export function requireStaffPage(session: SessionPayload): void {
 }
 
 /**
- * Throws unless the session belongs to staff/doctor, or to a guardian of the
+ * Throws unless the session belongs to staff/doctor of the patient's practice, or to a guardian of the
  * given patient (i.e. the patient themself or whoever manages them as a
  * dependent). This is the app-layer stand-in for what will become a Postgres
  * RLS policy on `patients`/`appointments` once we move off local SQLite.
@@ -44,7 +44,18 @@ export async function requirePatientAccess(
   session: SessionPayload,
   patientId: string,
 ): Promise<void> {
-  if (session.role === "staff" || session.role === "doctor") return;
+  if (session.role === "staff" || session.role === "doctor") {
+    // Staff see every patient in their own practice, and no one else's.
+    const [patient] = await db
+      .select({ practiceId: patients.practiceId })
+      .from(patients)
+      .where(eq(patients.id, patientId))
+      .limit(1);
+    if (!patient || patient.practiceId !== session.practiceId) {
+      throw new AuthzError("No access to this patient");
+    }
+    return;
+  }
 
   const [link] = await db
     .select({ id: patientGuardians.id })

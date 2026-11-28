@@ -1,4 +1,4 @@
-import { sql, eq, isNull } from "drizzle-orm";
+import { sql, eq, and, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { patients, visits } from "@/db/schema";
@@ -23,7 +23,7 @@ export default async function StaffPatientsPage({
     })
     .from(patients)
     .leftJoin(visits, eq(visits.patientId, patients.id))
-    .where(isNull(patients.deletedAt))
+    .where(and(isNull(patients.deletedAt), eq(patients.practiceId, session.practiceId)))
     .groupBy(patients.id)
     .orderBy(patients.lastName, patients.firstName);
 
